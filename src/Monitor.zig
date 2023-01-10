@@ -594,3 +594,75 @@ test "set_getGammaRamp" {
         }
     }
 }
+
+
+/// Sets the monitor configuration callback.
+///
+/// This function sets the monitor configuration callback, or removes the currently set callback.
+/// This is called when a monitor is connected to or disconnected from the system. Example:
+///
+/// ```
+/// fn monitorCallback(monitor: glfw.Monitor, event: glfw.Monitor.Event, data: *MyData) void {
+///     // data is the pointer you passed into setCallback.
+///     // event is one of .connected or .disconnected
+/// }
+/// ...
+/// glfw.Monitor.setCallback(MyData, &myData, monitorCallback)
+/// ```
+///
+/// `event` may be one of .connected or .disconnected. More events may be added in the future.
+///
+/// @return A callback wrapper, or null if no monitor callback was defined.
+///
+/// @thread_safety This function must only be called from the main thread.
+///
+/// see also: monitor_event
+pub inline fn setReversableCallback(comptime callback: ?fn (monitor: Monitor, event: Event) void) ?MonitorCallbackWrapper {
+    internal_debug.assertInitialized();
+
+    if (callback) |user_callback| {
+        const CWrapper = struct {
+            pub fn monitorCallbackWrapper(monitor: ?*c.GLFWmonitor, event: c_int) callconv(.C) void {
+                @call(.always_inline, user_callback, .{
+                    Monitor{ .handle = monitor.? },
+                    @intToEnum(Event, event),
+                });
+            }
+        };
+
+        if (c.glfwSetMonitorCallback(CWrapper.monitorCallbackWrapper)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    } else {
+        if (c.glfwSetMonitorCallback(null)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    }
+}
+
+/// A wrapper for a char callback function.
+/// This allows the user to register their own callback
+/// and retrain a reference to the previously defined
+/// callback. Calls can then be chained to the previous
+/// function via the 'previous' function.
+/// The previous function can be re-set as the primary
+/// function by call the 'restore' function.
+pub const MonitorCallbackWrapper = struct {
+    func: ?*const fn(?*c.GLFWmonitor, c_int) callconv(.C) void,
+    
+    pub fn previous(self: MonitorCallbackWrapper, monitor: Monitor, event: Event) void {
+        if(self.func) |funcExists| {
+            funcExists(monitor.handle, @enumToInt(event));
+        }
+    }
+    
+    pub fn restore(self: MonitorCallbackWrapper) void {
+        _ = c.glfwSetMonitorCallback(self.func);
+    }
+};

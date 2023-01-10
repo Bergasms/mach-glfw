@@ -3518,3 +3518,534 @@ test "hint-attribute default value parity" {
         // cocoa_graphics_switching
     }
 }
+
+
+/// Sets the focus callback for the specified window.
+///
+/// This function sets the focus callback of the specified window, which is
+/// called when the window gains or loses input focus.
+///
+/// After the focus callback is called for a window that lost input focus,
+/// synthetic key and mouse button release events will be generated for all such
+/// that had been pressed. For more information, see @ref glfwSetKeyCallback
+/// and @ref glfwSetMouseButtonCallback.
+///
+/// @param[in] window The window whose callback to set.
+/// @param[in] callback The new callback, or null to remove the currently set
+/// callback.
+///
+/// @callback_param `window` the window whose input focus has changed.
+/// @callback_param `focused` `true` if the window was given input focus, or `false` if it lost it.
+///
+/// @return A callback wrapper, or null if no window focus callback was defined.
+///
+/// @thread_safety This function must only be called from the main thread.
+///
+/// see also: window_focus
+pub inline fn setReversableFocusCallback(self: Window, comptime callback: ?fn (window: Window, focused: bool) void) ?WindowFocusCallbackWrapper {
+    internal_debug.assertInitialized();
+
+    if (callback) |user_callback| {
+        const CWrapper = struct {
+            pub fn focusCallbackWrapper(handle: ?*c.GLFWwindow, focused: c_int) callconv(.C) void {
+                @call(.always_inline, user_callback, .{
+                    from(handle.?),
+                    focused == c.GLFW_TRUE,
+                });
+            }
+        };
+
+        if (c.glfwSetWindowFocusCallback(self.handle, CWrapper.focusCallbackWrapper)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    } else {
+        if (c.glfwSetWindowFocusCallback(self.handle, null)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    }
+}
+
+/// A wrapper for a window focus callback function.
+/// This allows the user to register their own callback
+/// and retrain a reference to the previously defined
+/// callback. Calls can then be chained to the previous
+/// function via the 'previous' function.
+/// The previous function can be re-set as the primary
+/// function by call the 'restore' function.
+pub const WindowFocusCallbackWrapper = struct {
+    func: ?*const fn(?*c.GLFWwindow, c_int) callconv(.C) void,
+    
+    pub fn previous(self: WindowFocusCallbackWrapper, window: Window, focused: bool) void {
+        if(self.func) |funcExists| {
+            funcExists(window.handle, if (focused) 1 else 0 );
+        }
+    }
+    
+    pub fn restore(self: WindowFocusCallbackWrapper, window: Window) void {
+        _ = c.glfwSetWindowFocusCallback(window.handle, self.func);
+    }
+};
+
+
+/// Sets the cursor enter/leave callback.
+///
+/// This function sets the cursor boundary crossing callback of the specified window, which is
+/// called when the cursor enters or leaves the content area of the window.
+///
+/// @param[in] callback The new callback, or null to remove the currently set callback.
+///
+/// @callback_param[in] window The window that received the event.
+/// @callback_param[in] entered `true` if the cursor entered the window's content area, or `false`
+/// if it left it.
+///
+/// @return A callback wrapper, or null if no cursor enter callback was defined.
+///
+/// @thread_safety This function must only be called from the main thread.
+///
+/// see also: cursor_enter
+pub inline fn setReversableCursorEnterCallback(self: Window, comptime callback: ?fn (window: Window, entered: bool) void) ?CursorEnterCallbackWrapper {
+    internal_debug.assertInitialized();
+
+    if (callback) |user_callback| {
+        const CWrapper = struct {
+            pub fn cursorEnterCallbackWrapper(handle: ?*c.GLFWwindow, entered: c_int) callconv(.C) void {
+                @call(.always_inline, user_callback, .{
+                    from(handle.?),
+                    entered == c.GLFW_TRUE,
+                });
+            }
+        };
+
+        if (c.glfwSetCursorEnterCallback(self.handle, CWrapper.cursorEnterCallbackWrapper)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    } else {
+        if (c.glfwSetCursorEnterCallback(self.handle, null)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    }
+}
+
+/// A wrapper for a cursor enter callback function.
+/// This allows the user to register their own callback
+/// and retrain a reference to the previously defined
+/// callback. Calls can then be chained to the previous
+/// function via the 'previous' function.
+/// The previous function can be re-set as the primary
+/// function by call the 'restore' function.
+pub const CursorEnterCallbackWrapper = struct {
+    func: ?*const fn(?*c.GLFWwindow, c_int) callconv(.C) void,
+    
+    pub fn previous(self: CursorEnterCallbackWrapper, window: Window, entered: bool) void {
+        if(self.func) |funcExists| {
+            funcExists(window.handle, if (entered) 1 else 0 );
+        }
+    }
+    
+    pub fn restore(self: CursorEnterCallbackWrapper, window: Window) void {
+        _ = c.glfwSetCursorEnterCallback(window.handle, self.func);
+    }
+};
+
+/// Sets the cursor position callback.
+///
+/// This function sets the cursor position callback of the specified window, which is called when
+/// the cursor is moved. The callback is provided with the position, in screen coordinates, relative
+/// to the upper-left corner of the content area of the window.
+///
+/// @param[in] callback The new callback, or null to remove the currently set callback.
+///
+/// @callback_param[in] window The window that received the event.
+/// @callback_param[in] xpos The new cursor x-coordinate, relative to the left edge of the content
+/// area.
+/// callback_@param[in] ypos The new cursor y-coordinate, relative to the top edge of the content
+/// area.
+///
+/// @return A callback wrapper, or null if no cursor pos callback was defined.
+///
+/// @thread_safety This function must only be called from the main thread.
+///
+/// see also: cursor_pos
+pub inline fn setReversableCursorPosCallback(self: Window, comptime callback: ?fn (window: Window, xpos: f64, ypos: f64) void) ?CursorPosCallbackWrapper {
+    internal_debug.assertInitialized();
+
+    if (callback) |user_callback| {
+        const CWrapper = struct {
+            pub fn cursorPosCallbackWrapper(handle: ?*c.GLFWwindow, xpos: f64, ypos: f64) callconv(.C) void {
+                @call(.always_inline, user_callback, .{
+                    from(handle.?),
+                    xpos,
+                    ypos,
+                });
+            }
+        };
+ 
+        if (c.glfwSetCursorPosCallback(self.handle, CWrapper.cursorPosCallbackWrapper)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    } else {
+        if (c.glfwSetCursorPosCallback(self.handle, null)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    }
+}
+
+/// A wrapper for a cursor pos callback function.
+/// This allows the user to register their own callback
+/// and retrain a reference to the previously defined
+/// callback. Calls can then be chained to the previous
+/// function via the 'previous' function.
+/// The previous function can be re-set as the primary
+/// function by call the 'restore' function.
+pub const CursorPosCallbackWrapper = struct {
+    func: ?*const fn(?*c.GLFWwindow, f64, f64) callconv(.C) void,
+    
+    pub fn previous(self: CursorPosCallbackWrapper, window: Window, xpos: f64, ypos: f64) void {
+        if(self.func) |funcExists| {
+            funcExists(window.handle, xpos, ypos);
+        }
+    }
+    
+    pub fn restore(self: CursorPosCallbackWrapper, window: Window) void {
+        _ = c.glfwSetCursorPosCallback(window.handle, self.func);
+    }
+};
+
+
+/// Sets the mouse button callback.
+///
+/// This function sets the mouse button callback of the specified window, which is called when a
+/// mouse button is pressed or released.
+///
+/// When a window loses input focus, it will generate synthetic mouse button release events for all
+/// pressed mouse buttons. You can tell these events from user-generated events by the fact that the
+/// synthetic ones are generated after the focus loss event has been processed, i.e. after the
+/// window focus callback (see glfw.Window.setFocusCallback) has been called.
+///
+/// @param[in] window The window whose callback to set.
+/// @param[in] callback The new callback, or null to remove the currently set callback.
+///
+/// @callback_param[in] window The window that received the event.
+/// @callback_param[in] button The mouse button that was pressed or released.
+/// @callback_param[in] action One of `glfw.Action.press` or `glfw.Action.release`. Future releases
+/// may add more actions.
+/// @callback_param[in] mods Bit field describing which modifier keys (see mods) were held down.
+///
+/// @return A callback wrapper, or null if no mouse button callback was defined.
+///
+/// @thread_safety This function must only be called from the main thread.
+///
+/// see also: input_mouse_button
+pub inline fn setReversableMouseButtonCallback(self: Window, comptime callback: ?fn (window: Window, button: MouseButton, action: Action, mods: Mods) void) ?MouseButtonCallbackWrapper {
+    internal_debug.assertInitialized();
+
+    if (callback) |user_callback| {
+        const CWrapper = struct {
+            pub fn mouseButtonCallbackWrapper(handle: ?*c.GLFWwindow, button: c_int, action: c_int, mods: c_int) callconv(.C) void {
+                @call(.always_inline, user_callback, .{
+                    from(handle.?),
+                    @intToEnum(MouseButton, button),
+                    @intToEnum(Action, action),
+                    Mods.fromInt(mods),
+                });
+            }
+        };
+
+        if (c.glfwSetMouseButtonCallback(self.handle, CWrapper.mouseButtonCallbackWrapper)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    } else {
+        if (c.glfwSetMouseButtonCallback(self.handle, null)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    }
+}
+
+
+/// A wrapper for a mouse button callback function.
+/// This allows the user to register their own callback
+/// and retrain a reference to the previously defined
+/// callback. Calls can then be chained to the previous
+/// function via the 'previous' function.
+/// The previous function can be re-set as the primary
+/// function by call the 'restore' function.
+pub const MouseButtonCallbackWrapper = struct {
+    func: ?*const fn(?*c.GLFWwindow, c_int, c_int, c_int) callconv(.C) void,
+    
+    pub fn previous(self: MouseButtonCallbackWrapper, window: Window, button: MouseButton, action: Action, mods: Mods) void {
+        if(self.func) |funcExists| {
+            funcExists(window.handle,
+            @enumToInt(button),
+            @enumToInt(action),
+            mods.toInt(c_int));
+        }
+    }
+    
+    pub fn restore(self: MouseButtonCallbackWrapper, window: Window) void {
+        _ = c.glfwSetMouseButtonCallback(window.handle, self.func);
+    }
+};
+
+
+
+/// Sets the scroll callback.
+///
+/// This function sets the scroll callback of the specified window, which is called when a scrolling
+/// device is used, such as a mouse wheel or scrolling area of a touchpad.
+///
+/// The scroll callback receives all scrolling input, like that from a mouse wheel or a touchpad
+/// scrolling area.
+///
+/// @param[in] window The window whose callback to set.
+/// @param[in] callback The new scroll callback, or null to remove the currently set callback.
+///
+/// @callback_param[in] window The window that received the event.
+/// @callback_param[in] xoffset The scroll offset along the x-axis.
+/// @callback_param[in] yoffset The scroll offset along the y-axis.
+///
+/// @return A callback wrapper, or null if no scroll callback was defined.
+///
+/// @thread_safety This function must only be called from the main thread.
+///
+/// see also: scrolling
+pub inline fn setReversableScrollCallback(self: Window, comptime callback: ?fn (window: Window, xoffset: f64, yoffset: f64) void) ?ScrollCallbackWrapper {
+    internal_debug.assertInitialized();
+
+    if (callback) |user_callback| {
+        const CWrapper = struct {
+            pub fn scrollCallbackWrapper(handle: ?*c.GLFWwindow, xoffset: f64, yoffset: f64) callconv(.C) void {
+                @call(.always_inline, user_callback, .{
+                    from(handle.?),
+                    xoffset,
+                    yoffset,
+                });
+            }
+        };
+
+        if (c.glfwSetScrollCallback(self.handle, CWrapper.scrollCallbackWrapper)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    } else {
+        if (c.glfwSetScrollCallback(self.handle, null)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    }
+}
+
+
+/// A wrapper for a scroll callback function.
+/// This allows the user to register their own callback
+/// and retrain a reference to the previously defined
+/// callback. Calls can then be chained to the previous
+/// function via the 'previous' function.
+/// The previous function can be re-set as the primary
+/// function by call the 'restore' function.
+pub const ScrollCallbackWrapper = struct {
+    func: ?*const fn(?*c.GLFWwindow, f64, f64) callconv(.C) void,
+    
+    pub fn previous(self: ScrollCallbackWrapper, window: Window, xpos: f64, ypos: f64) void {
+        if(self.func) |funcExists| {
+            funcExists(window.handle, xpos, ypos);
+        }
+    }
+    
+    pub fn restore(self: ScrollCallbackWrapper, window: Window) void {
+        _ = c.glfwSetScrollCallback(window.handle, self.func);
+    }
+};
+
+
+/// Sets the key callback.
+///
+/// This function sets the key callback of the specified window, which is called when a key is
+/// pressed, repeated or released.
+///
+/// The key functions deal with physical keys, with layout independent key tokens (see keys) named
+/// after their values in the standard US keyboard layout. If you want to input text, use the
+/// character callback (see glfw.Window.setCharCallback) instead.
+///
+/// When a window loses input focus, it will generate synthetic key release events for all pressed
+/// keys. You can tell these events from user-generated events by the fact that the synthetic ones
+/// are generated after the focus loss event has been processed, i.e. after the window focus
+/// callback (see glfw.Window.setFocusCallback) has been called.
+///
+/// The scancode of a key is specific to that platform or sometimes even to that machine. Scancodes
+/// are intended to allow users to bind keys that don't have a GLFW key token. Such keys have `key`
+/// set to `glfw.key.unknown`, their state is not saved and so it cannot be queried with
+/// glfw.Window.getKey.
+///
+/// Sometimes GLFW needs to generate synthetic key events, in which case the scancode may be zero.
+///
+/// @param[in] window The window whose callback to set.
+/// @param[in] callback The new key callback, or null to remove the currently set callback.
+///
+/// @callback_param[in] window The window that received the event.
+/// @callback_param[in] key The keyboard key (see keys) that was pressed or released.
+/// @callback_param[in] scancode The platform-specific scancode of the key.
+/// @callback_param[in] action `glfw.Action.press`, `glfw.Action.release` or `glfw.Action.repeat`.
+/// Future releases may add more actions.
+/// @callback_param[in] mods Bit field describing which modifier keys (see mods) were held down.
+///
+/// @return A callback wrapper, or null if no key button callback was defined.
+///
+/// @thread_safety This function must only be called from the main thread.
+///
+/// see also: input_key
+pub inline fn setReversableKeyCallback(self: Window, comptime callback: ?fn (window: Window, key: Key, scancode: i32, action: Action, mods: Mods) void) ?KeyCallbackWrapper {
+    internal_debug.assertInitialized();
+
+    if (callback) |user_callback| {
+        const CWrapper = struct {
+            pub fn keyCallbackWrapper(handle: ?*c.GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int) callconv(.C) void {
+                @call(.always_inline, user_callback, .{
+                    from(handle.?),
+                    @intToEnum(Key, key),
+                    @intCast(i32, scancode),
+                    @intToEnum(Action, action),
+                    Mods.fromInt(mods),
+                });
+            }
+        };
+
+        if (c.glfwSetKeyCallback(self.handle, CWrapper.keyCallbackWrapper)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    } else {
+        if (c.glfwSetKeyCallback(self.handle, null)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    }
+}
+
+/// A wrapper for a key callback function.
+/// This allows the user to register their own callback
+/// and retrain a reference to the previously defined
+/// callback. Calls can then be chained to the previous
+/// function via the 'previous' function.
+/// The previous function can be re-set as the primary
+/// function by call the 'restore' function.
+pub const KeyCallbackWrapper = struct {
+    func: ?*const fn(?*c.GLFWwindow, c_int, c_int, c_int, c_int) callconv(.C) void,
+    
+    pub fn previous(self: KeyCallbackWrapper, window: Window, key: Key, scancode: i32, action: Action, mods: Mods) void {
+        if(self.func) |funcExists| {
+            funcExists(window.handle, @enumToInt(key), scancode, @enumToInt(action),mods.toInt(c_int));
+        }
+    }
+    
+    pub fn restore(self: KeyCallbackWrapper, window: Window) void {
+        _ = c.glfwSetKeyCallback(window.handle, self.func);
+    }
+};
+
+/// Sets the Unicode character callback.
+///
+/// This function sets the character callback of the specified window, which is called when a
+/// Unicode character is input.
+///
+/// The character callback is intended for Unicode text input. As it deals with characters, it is
+/// keyboard layout dependent, whereas the key callback (see glfw.Window.setKeyCallback) is not.
+/// Characters do not map 1:1 to physical keys, as a key may produce zero, one or more characters.
+/// If you want to know whether a specific physical key was pressed or released, see the key
+/// callback instead.
+///
+/// The character callback behaves as system text input normally does and will not be called if
+/// modifier keys are held down that would prevent normal text input on that platform, for example a
+/// Super (Command) key on macOS or Alt key on Windows.
+///
+/// @param[in] window The window whose callback to set.
+/// @param[in] callback The new callback, or null to remove the currently set callback.
+///
+/// @callback_param[in] window The window that received the event.
+/// @callback_param[in] codepoint The Unicode code point of the character.
+///
+/// @return A callback wrapper, or null if no char callback was defined.
+///
+/// @thread_safety This function must only be called from the main thread.
+///
+/// see also: input_char
+pub inline fn setReversableCharCallback(self: Window, comptime callback: ?fn (window: Window, codepoint: u21) void) ?CharCallbackWrapper {
+    internal_debug.assertInitialized();
+
+    if (callback) |user_callback| {
+        const CWrapper = struct {
+            pub fn charCallbackWrapper(handle: ?*c.GLFWwindow, codepoint: c_uint) callconv(.C) void {
+                @call(.always_inline, user_callback, .{
+                    from(handle.?),
+                    @intCast(u21, codepoint),
+                });
+            }
+        };
+
+        if (c.glfwSetCharCallback(self.handle, CWrapper.charCallbackWrapper)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    } else {
+        if (c.glfwSetCharCallback(self.handle, null)) |existing| {
+            return .{
+                 .func = existing,
+            };
+        }
+        return null;
+    }
+}
+
+/// A wrapper for a char callback function.
+/// This allows the user to register their own callback
+/// and retrain a reference to the previously defined
+/// callback. Calls can then be chained to the previous
+/// function via the 'previous' function.
+/// The previous function can be re-set as the primary
+/// function by call the 'restore' function.
+pub const CharCallbackWrapper = struct {
+    func: ?*const fn(?*c.GLFWwindow, c_uint) callconv(.C) void,
+    
+    pub fn previous(self: CharCallbackWrapper, window: Window, codepoint: u21) void {
+        if(self.func) |funcExists| {
+            funcExists(window.handle, @intCast(c_uint,codepoint));
+        }
+    }
+    
+    pub fn restore(self: CharCallbackWrapper, window: Window) void {
+        _ = c.glfwSetCharCallback(window.handle, self.func);
+    }
+};
