@@ -117,7 +117,7 @@ fn buildLibrary(b: *Builder, mode: std.builtin.Mode, target: std.zig.CrossTarget
 }
 
 fn addGLFWIncludes(step: *std.build.LibExeObjStep) void {
-    step.addIncludePath(sdkPath(step.builder, "/upstream/glfw/include"));
+    step.addIncludePath(sdkPath(step.builder, "/glfwheaders"));
     step.addIncludePath(sdkPath(step.builder, "/upstream/vulkan_headers/include"));
 }
 
